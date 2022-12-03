@@ -18,39 +18,37 @@ codex = Dict{Char, Shape}(
 )
 
 struct Game{T <: Shape, S <: Shape}
-    self::T
-    other::S
+    opponent::T
+    self::S
 end
 
-play(::Game{Rock, Scissors}) = Win()
-play(::Game{Paper, Rock}) = Win()
-play(::Game{Scissors, Paper}) = Win()
+play(::Game{Scissors, Rock}) = Win()
+play(::Game{Rock, Paper}) = Win()
+play(::Game{Paper, Scissors}) = Win()
 play(::Game{T, T} where T <: Shape) = Draw()
 play(::Game{<:Shape, <:Shape}) = Loss()
 score(game::Game) = play(game).points + game.self.points
 
-decode_letter(letter::Char, codex::Dict) = get(codex, letter, nothing)
-parse_input(s::AbstractString) = split(s, "\n")
-
-function parse_game(s::AbstractString, codex::Dict)
-    decode(c::Char) = decode_letter(c, codex)
-    codes = only.(split(s))
-    shapes = decode.(codes)
-    other, self = shapes[1], shapes[2]
-    return Game(self, other)
-end
-
-parse_strategy_guide(s::AbstractString, codex::Dict) = [parse_game(game, codex) for game in parse_input(s)]
+parse_input(s::AbstractString) = split(s, "\n"; keepempty=false)
+parse_letter(letter::Char, codex::Dict) = get(codex, letter, nothing)
+parse_code(code::Char) = parse_letter(code, codex)
+parse_game(s::AbstractString) = Game(parse_code.(only.(split(s)))...)
+parse_strategy_guide(s::AbstractString, codex::Dict) = parse_game.(parse_input(s))
 score(strategy_guide::Vector{Game}) = sum(score.(strategy_guide))
 
+
 # Validate on test data
-test_data = read("test_data.txt", String)
+test_data = """
+A Y
+B X
+C Z
+"""
 test_strategy_guide = parse_strategy_guide(test_data, codex)
-@assert test_strategy_guide == [Game(Paper(), Rock()), Game(Rock(), Paper()), Game(Scissors(), Scissors())]
+@assert test_strategy_guide == [Game(Rock(), Paper()), Game(Paper(), Rock()), Game(Scissors(), Scissors())]
 @assert score(test_strategy_guide) == 15
 
 
 # Solve challenge
-data = read("data.txt", String)
+data = read("2.input", String)
 strategy_guide = parse_strategy_guide(data, codex)
 @show score(strategy_guide)
