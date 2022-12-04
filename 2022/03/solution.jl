@@ -31,9 +31,9 @@ rucksacks = parse_rucksacks(data)
 # ======
 # Part 2
 # ======
-Group = Vector{Rucksack}
-groups(rucksacks::Vector{Rucksack}) = Group.(collect(Iterators.partition(rucksacks, 3)))
-common_item(group::Group) = pop!(intersect([union(rucksack...) for rucksack in group]...))
+Rucksacks = Vector{Rucksack}
+groups(rucksacks::Rucksacks) = Rucksacks.(collect(Iterators.partition(rucksacks, 3)))
+common_item(rucksacks::Rucksacks) = pop!(intersect([union(rucksack...) for rucksack in rucksacks]...))
 
 # Validate on test input
 @assert sum(priority.(common_item.(groups(test_rucksacks)))) == 70
