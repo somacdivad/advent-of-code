@@ -9,8 +9,6 @@ module SupplyDepot
     Crate = Char
     StackOfCrates = Vector{Crate}
     Depot = Vector{StackOfCrates}
-    Diagram = AbstractString
-    DiagramRow = AbstractString
 
     function add_row_crates!(depot::Depot, row::AbstractString)
         crates = [char for (i, char) in enumerate(row) if i % 4 == 2]
@@ -42,33 +40,44 @@ module Crane
     abstract type AbstractCrane end
     Instruction = Tuple{Int, Int, Int}
     Instructions = AbstractArray{Instruction}
-    InstructionList = AbstractString
 
     function parse_instruction(s::AbstractString)
         m = match(r"move (?<qty>\d+) from (?<src>\d+) to (?<dest>\d+)", s)
         return Instruction([parse(Int, char) for char in m.captures])
     end
-    parse_instructions(list::InstructionList) = parse_instruction.(split(list, "\n"; keepempty=false))
+
+    function parse_instructions(instruction_list::AbstractString)
+        return parse_instruction.(split(instruction_list, "\n"; keepempty=false))
+    end
 
     function move_crate!(::Type{<:AbstractCrane}, D::Depot, src::Int, dest::Int)
         !isempty(D[src]) && push!(D[dest], pop!(D[src]))
         return D
     end
-    move_crate!(D::Depot, src::Int, dest::Int) = move_crate!(AbstractCrane, D, src, dest)
-    
+
+    function move_crate!(D::Depot, src::Int, dest::Int)
+        return move_crate!(AbstractCrane, D, src, dest)
+    end
+
     function move_crates!(T::Type{<:AbstractCrane}, D::Depot, src::Int, dest::Int, qty::Int)
         for _ in 1:qty
             D = move_crate!(T, D, src, dest)
         end
         return D
     end
-    move_crates!(D::Depot, src::Int, dest::Int, qty::Int) = move_crates!(AbstractCrane, D, src, dest, qty)
-    
+
+    function move_crates!(D::Depot, src::Int, dest::Int, qty::Int)
+        return move_crates!(AbstractCrane, D, src, dest, qty)
+    end
+
     function execute_instruction!(T::Type{<:AbstractCrane}, D::Depot, instruction::Instruction)
         qty, src, dest = instruction
         return move_crates!(T, D, src, dest, qty)
     end
-    execute_instruction!(D::Depot, instruction::Instruction) = execute_instruction!(AbstractCrane, D, instruction)
+
+    function execute_instruction!(D::Depot, instruction::Instruction)
+        return execute_instruction!(AbstractCrane, D, instruction)
+    end
 
     function execute_instructions!(T::Type{<:AbstractCrane}, D::Depot, instructions::Instructions)
         for instruction in instructions
@@ -76,7 +85,10 @@ module Crane
         end
         return D
     end
-    execute_instructions!(D::Depot, instructions::Instructions) = execute_instructions!(AbstractCrane, D, instructions)
+
+    function execute_instructions!(D::Depot, instructions::Instructions)
+        return execute_instructions!(AbstractCrane, D, instructions)
+    end
 
     export parse_instructions
     export execute_instructions!
