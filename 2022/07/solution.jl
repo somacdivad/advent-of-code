@@ -30,16 +30,16 @@ module FileSystem
         return cwd
     end
 
-    function traverse!(d::Directory, visited::Vector, by::Union{Function, Nothing})
-        visited = isnothing(by) || by(d) ? push!(visited, d) : visited
+    function traverse!(d::Directory, visited::Vector, filter_by::Union{Function, Nothing})
+        visited = isnothing(filter_by) || filter_by(d) ? push!(visited, d) : visited
         for dir in values(d.subdirectories)
-            traverse!(dir, visited, by)
+            traverse!(dir, visited, filter_by)
         end
     end
 
-    function traverse(d::Directory; by::Union{Function, Nothing}=nothing)
+    function traverse(d::Directory; filter_by::Union{Function, Nothing}=nothing)
         visited = []
-        traverse!(d, visited, by)
+        traverse!(d, visited, filter_by)
         return visited
     end
 
@@ -105,7 +105,8 @@ using .Parser
 
 function part1(puzzle_input::AbstractString)
     root = parse_terminal_output(puzzle_input)
-    dirs = traverse(root; by=d -> sizeof(d) <= 100000)
+    small_enough(dir::Directory) = sizeof(dir) <= 100000
+    dirs = traverse(root; filter_by=small_enough)
     return sum(sizeof.(dirs))
 end
 
@@ -153,7 +154,8 @@ function part2(puzzle_input::AbstractString)
     used = sizeof(root)
     free = total - used
     needed = 30000000
-    dirs = traverse(root; by=d -> (sizeof(d) + free) >= needed)
+    large_enough(dir::Directory) = (sizeof(dir) + free) >= needed
+    dirs = traverse(root; filter_by=large_enough)
     return minimum(sizeof.(dirs))
 end
 
