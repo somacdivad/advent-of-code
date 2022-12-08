@@ -14,16 +14,21 @@ module FileSystem
 
     struct Directory
         name::String
-        files::Vector{File}
         parent::Union{Directory, Nothing}
+        files::Dict{String, File}
         subdirectories::Dict{String, Directory}
     end
-    Directory(name::AbstractString) = Directory(name, [], nothing, Dict())
-    Base.sizeof(d::Directory) = sum(sizeof.(d.files)) + sum(sizeof.(values(d.subdirectories)); init=0)
+    Directory(name::AbstractString) = Directory(name, nothing, Dict(), Dict())
+    Base.sizeof(d::Directory) = sum(sizeof.(values(d.files))) + sum(sizeof.(values(d.subdirectories)); init=0)
+
+    function makefile!(name::AbstractString, size::Int, cwd::Directory)
+        cwd.files[name] = File(name, size)
+        return cwd
+    end
 
     function makedir!(name::AbstractString, cwd::Directory)
         if name ∉ keys(cwd.subdirectories)
-            cwd.subdirectories[name] = Directory(name, [], cwd, Dict())
+            cwd.subdirectories[name] = Directory(name, cwd, Dict(), Dict())
         end
         return cwd
     end
@@ -49,6 +54,7 @@ module FileSystem
 
     export File
     export Directory
+    export makefile!
     export makedir!
     export changedir
     export traverse
@@ -65,21 +71,12 @@ module Parser
         return cwd
     end
 
-    function parse_file!(info::AbstractString, name::AbstractString, cwd::Directory)
-        f = File(name, parse(Int64, info))
-        push!(cwd.files, f)
-        return cwd
-    end
-
-    function parse_info!(info::AbstractString, name::AbstractString, cwd::Directory)
-        info == "dir" && return makedir!(name, cwd)
-        tryparse(Int, info) != nothing && return parse_file!(info, name, cwd)
-        return cwd
-    end
-
     function parse_output!(s::AbstractString, cwd::Directory)
         info, name = match(r"(?<info>\S+) (?<name>\S+)", s)
-        return parse_info!(info, name, cwd)
+        info == "dir" && return makedir!(name, cwd)
+        size = tryparse(Int, info)
+        size != nothing && return makefile!(name, size, cwd)
+        return cwd
     end
 
     function parse_terminal_output(s::AbstractString)
