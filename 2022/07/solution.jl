@@ -39,17 +39,15 @@ module FileSystem
         return cwd
     end
 
-    function traverse!(d::Directory, visited::Vector, filter_by::Union{Function, Nothing})
-        visited = isnothing(filter_by) || filter_by(d) ? push!(visited, d) : visited
-        for dir in values(d.subdirectories)
-            traverse!(dir, visited, filter_by)
+    function traverse(dir::Directory; filter_by::Union{Function, Nothing}=nothing)
+        unvisited = [dir]
+        filtered = []
+        while !isempty(unvisited)
+            d = pop!(unvisited)
+            (isnothing(filter_by) || filter_by(d)) && push!(filtered, d)
+            unvisited = vcat(unvisited, values(d.subdirectories)...)
         end
-    end
-
-    function traverse(d::Directory; filter_by::Union{Function, Nothing}=nothing)
-        visited = []
-        traverse!(d, visited, filter_by)
-        return visited
+        return filtered
     end
 
     export File
