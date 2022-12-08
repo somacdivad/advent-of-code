@@ -10,6 +10,7 @@ module FileSystem
         name::String
         size::Int
     end
+    Base.sizeof(f::File) = f.size
 
     struct Directory
         name::String
@@ -17,16 +18,19 @@ module FileSystem
         parent::Union{Directory, Nothing}
         subdirectories::Dict{String, Directory}
     end
-
     Directory(name::AbstractString) = Directory(name, [], nothing, Dict())
-
-    Base.sizeof(f::File) = f.size
     Base.sizeof(d::Directory) = sum(sizeof.(d.files)) + sum(sizeof.(values(d.subdirectories)); init=0)
 
     function makedir!(name::AbstractString, cwd::Directory)
         if name ∉ keys(cwd.subdirectories)
             cwd.subdirectories[name] = Directory(name, [], cwd, Dict())
         end
+        return cwd
+    end
+
+    function changedir(name::AbstractString, cwd::Directory)
+        name in keys(cwd.subdirectories) && return cwd.subdirectories[name]
+        name == ".." && return cwd.parent
         return cwd
     end
 
@@ -46,6 +50,7 @@ module FileSystem
     export File
     export Directory
     export makedir!
+    export changedir
     export traverse
 end
 
@@ -54,15 +59,9 @@ module Parser
 
     is_cmd(s::AbstractString) = startswith(s, r"\$")
 
-    function parse_cd(arg::AbstractString, cwd::Directory)
-        arg in keys(cwd.subdirectories) && return cwd.subdirectories[arg]
-        arg == ".." && return cwd.parent
-        return cwd
-    end
-
     function parse_cmd(s::AbstractString, cwd::Directory)
         cmd, _, arg = match(r"\$ (?<cmd>\S+)(\s(?<arg>\S+))?", s)
-        cmd == "cd" && return parse_cd(arg, cwd)
+        cmd == "cd" && return changedir(arg, cwd)
         return cwd
     end
 
