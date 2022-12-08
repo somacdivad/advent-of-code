@@ -60,13 +60,8 @@ module Parser
     is_cmd(s::AbstractString) = startswith(s, r"\$")
 
     function parse_cmd(s::AbstractString, cwd::Directory)
-        cmd, _, arg = match(r"\$ (?<cmd>\S+)(\s(?<arg>\S+))?", s)
+        cmd, _, arg = match(r"\$ (?<cmd>\S+)( (?<arg>\S+))?", s)
         cmd == "cd" && return changedir(arg, cwd)
-        return cwd
-    end
-
-    function parse_dir!(name::AbstractString, cwd::Directory)
-        name ∉ keys(cwd.subdirectories) && return makedir!(name, cwd)
         return cwd
     end
 
@@ -77,7 +72,7 @@ module Parser
     end
 
     function parse_info!(info::AbstractString, name::AbstractString, cwd::Directory)
-        info == "dir" && return parse_dir!(name, cwd)
+        info == "dir" && return makedir!(name, cwd)
         tryparse(Int, info) != nothing && return parse_file!(info, name, cwd)
         return cwd
     end
