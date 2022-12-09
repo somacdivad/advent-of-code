@@ -48,13 +48,13 @@ function move(T::Type{<:Direction}, rope::Rope)
 end
 
 function simulate(rope::Rope, instructions::Vector)
-    steps = [rope]
+    ropes = [rope]
     for (direction, n) in instructions
         for _ in 1:n
-            push!(steps, move(direction, last(steps)))
+            push!(ropes, move(direction, last(ropes)))
         end
     end
-    return steps
+    return ropes
 end
 
 function parse_instruction(s::AbstractString)
@@ -66,8 +66,8 @@ parse_instructions(input::AbstractString) = parse_instruction.(split(input, '\n'
 
 function part1(input::AbstractString)
     moves = parse_instructions(input)
-    steps = simulate(Rope(2), moves)
-    visited_by_tail = unique(tail(rope).pos for rope in steps)
+    ropes = simulate(Rope(2), moves)
+    visited_by_tail = unique(tail(r).pos for r in ropes)
     return length(visited_by_tail)
 end
 
