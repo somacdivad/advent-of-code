@@ -5,84 +5,69 @@
 # ======
 # Part 1
 # ======
-module RopeSimulator
-    Coordinates = Vector{Int}
+abstract type Direction end
+abstract type Up <: Direction end
+abstract type Down <: Direction end
+abstract type Left <: Direction end
+abstract type Right <: Direction end
+Coordinates = Vector{Int}
 
-    abstract type Direction end
-    abstract type Up <: Direction end
-    abstract type Down <: Direction end
-    abstract type Left <: Direction end
-    abstract type Right <: Direction end
+struct Knot
+    pos::Coordinates
+end
+Knot() = Knot([0, 0])
 
-    struct Knot
-        pos::Coordinates
+struct Rope
+    knots::Vector{Knot}
+end
+Rope(n::Int) = Rope([Knot() for _ in 1:n])
+
+head(rope::Rope) = first(rope.knots)
+tail(rope::Rope) = last(rope.knots)
+move(::Type{Up}, knot::Knot) = Knot(knot.pos + [0, 1])
+move(::Type{Down}, knot::Knot) = Knot(knot.pos + [0, -1])
+move(::Type{Left}, knot::Knot) = Knot(knot.pos + [-1, 0])
+move(::Type{Right}, knot::Knot) = Knot(knot.pos + [1, 0])
+
+function follow(leader::Knot, follower::Knot)
+    is_touching = all(abs.(leader.pos - follower.pos) .<= [1, 1])
+    is_touching && return follower
+    return Knot(follower.pos + sign.(leader.pos - follower.pos))
+end
+
+function move(T::Type{<:Direction}, rope::Rope)
+    new_head = move(T, head(rope))
+    rest = []
+    leader = new_head
+    for knot in rope.knots[2:end]
+        moved = follow(leader, knot)
+        push!(rest, moved)
+        leader = moved
     end
-    Knot() = Knot([0, 0])
+    return Rope([new_head, rest...])
+end
 
-    struct Rope
-        knots::Vector{Knot}
-    end
-
-    head(rope::Rope) = first(rope.knots)
-    tail(rope::Rope) = last(rope.knots)
-
-    move(::Type{Up}, knot::Knot) = Knot(knot.pos + [0, 1])
-    move(::Type{Down}, knot::Knot) = Knot(knot.pos + [0, -1])
-    move(::Type{Left}, knot::Knot) = Knot(knot.pos + [-1, 0])
-    move(::Type{Right}, knot::Knot) = Knot(knot.pos + [1, 0])
-
-    touching(knot1::Knot, knot2::Knot) = all(abs.(knot1.pos - knot2.pos) .<= [1, 1])
-
-    function follow(leader::Knot, follower::Knot)
-        touching(leader, follower) && return follower
-        return Knot(follower.pos + sign.(leader.pos - follower.pos))
-    end
-
-    function move(T::Type{<:Direction}, rope::Rope)
-        new_head = move(T, head(rope))
-        rest = []
-        leader = new_head
-        for knot in rope.knots[2:end]
-            moved = follow(leader, knot)
-            push!(rest, moved)
-            leader = moved
+function simulate(rope::Rope, instructions::Vector)
+    steps = [rope]
+    for (direction, n) in instructions
+        for _ in 1:n
+            push!(steps, move(direction, last(steps)))
         end
-        return Rope([new_head, rest...])
     end
-
-    export Knot, Rope
-    export head, tail
-    export Direction, Up, Down, Left, Right
-    export move
+    return steps
 end
 
-module Parser
-    using ..RopeSimulator 
-
-    function parse_move(s::AbstractString)
-        directions = Dict("U" => Up, "D" => Down, "R" => Right, "L" => Left)
-        direction, quantity = split(strip(s))
-        return directions[direction], parse(Int, quantity)
-    end
-
-    parse_moves(input::AbstractString) = parse_move.(split(strip(input), '\n'))
-
-    export parse_moves
+function parse_instruction(s::AbstractString)
+    directions = Dict("U" => Up, "D" => Down, "R" => Right, "L" => Left)
+    direction, quantity = split(strip(s))
+    return directions[direction], parse(Int, quantity)
 end
-
-using .RopeSimulator
-using .Parser
+parse_instructions(input::AbstractString) = parse_instruction.(split(input, '\n'; keepempty=false))
 
 function part1(input::AbstractString)
-    moves = parse_moves(input)
-    rope = Rope([Knot(), Knot()])
-    visited_by_tail = Set([tail(rope).pos])
-    for (direction, n) in moves
-        for _ in 1:n
-            rope = move(direction, rope)
-            push!(visited_by_tail, tail(rope).pos)
-        end
-    end
+    moves = parse_instructions(input)
+    steps = simulate(Rope(2), moves)
+    visited_by_tail = unique(tail(rope).pos for rope in steps)
     return length(visited_by_tail)
 end
 
@@ -108,15 +93,9 @@ puzzle_input = read("9.input", String)
 # Part 2
 # ======
 function part2(input::AbstractString)
-    moves = parse_moves(input)
-    rope = Rope([Knot() for _ in 1:10])
-    visited_by_tail = Set([tail(rope).pos])
-    for (direction, n) in moves
-        for _ in 1:n
-            rope = move(direction, rope)
-            push!(visited_by_tail, tail(rope).pos)
-        end
-    end
+    moves = parse_instructions(input)
+    steps = simulate(Rope(10), moves)
+    visited_by_tail = unique(tail(rope).pos for rope in steps)
     return length(visited_by_tail)
 end
 
