@@ -5,42 +5,33 @@
 # ======
 # Part 1
 # ======
-abstract type Direction end
-abstract type Up <: Direction end
-abstract type Down <: Direction end
-abstract type Left <: Direction end
-abstract type Right <: Direction end
-Coordinates = Vector{Int}
+const up = [0, 1]
+const down = [0, -1]
+const left = [-1, 0]
+const right = [1, 0]
 
 struct Knot
-    pos::Coordinates
+    pos::Vector{Int}
 end
 Knot() = Knot([0, 0])
+touching(k1::Knot, k2::Knot) = all(abs.(k1.pos - k2.pos) .<= [1, 1])
+direction(from::Knot, to::Knot) = sign.(to.pos - from.pos)
+move(knot::Knot, direction::Vector{Int}) = Knot(knot.pos + direction)
+move(knot::Knot, towards::Knot) = touching(knot, towards) ? knot : move(knot, direction(knot, towards))
 
 struct Rope
     knots::Vector{Knot}
 end
 Rope(n::Int) = Rope([Knot() for _ in 1:n])
-
 head(rope::Rope) = first(rope.knots)
 tail(rope::Rope) = last(rope.knots)
-move(::Type{Up}, knot::Knot) = Knot(knot.pos + [0, 1])
-move(::Type{Down}, knot::Knot) = Knot(knot.pos + [0, -1])
-move(::Type{Left}, knot::Knot) = Knot(knot.pos + [-1, 0])
-move(::Type{Right}, knot::Knot) = Knot(knot.pos + [1, 0])
 
-function follow(leader::Knot, follower::Knot)
-    is_touching = all(abs.(leader.pos - follower.pos) .<= [1, 1])
-    is_touching && return follower
-    return Knot(follower.pos + sign.(leader.pos - follower.pos))
-end
-
-function move(T::Type{<:Direction}, rope::Rope)
-    new_head = move(T, head(rope))
+function move(rope::Rope, direction::Vector{Int})
+    new_head = move(head(rope), direction)
     rest = []
     leader = new_head
     for knot in rope.knots[2:end]
-        moved = follow(leader, knot)
+        moved = move(knot, leader)
         push!(rest, moved)
         leader = moved
     end
@@ -51,14 +42,14 @@ function simulate(rope::Rope, instructions::Vector)
     ropes = [rope]
     for (direction, n) in instructions
         for _ in 1:n
-            push!(ropes, move(direction, last(ropes)))
+            push!(ropes, move(last(ropes), direction))
         end
     end
     return ropes
 end
 
 function parse_instruction(s::AbstractString)
-    directions = Dict("U" => Up, "D" => Down, "R" => Right, "L" => Left)
+    directions = Dict("U" => up, "D" => down, "R" => right, "L" => left)
     direction, quantity = split(strip(s))
     return directions[direction], parse(Int, quantity)
 end
